@@ -1,21 +1,45 @@
-// Function to send the selected text to the background script
-function sendSelectedText() {
-    const selectedText = window.getSelection().toString().trim();
+document.addEventListener('mouseup', function() {
+    const selectedText = window.getSelection().toString();
     if (selectedText.length > 0) {
-        chrome.runtime.sendMessage({
-            action: "playText",
-            text: selectedText
-        });
-    }
-}
-
-// Add an event listener for mouseup events (triggered after text selection)
-document.addEventListener("mouseup", sendSelectedText);
-
-// Optionally, add a listener for keyboard shortcuts (like pressing a key combination)
-// Here is an example for Ctrl+Shift+S:
-document.addEventListener("keydown", function (e) {
-    if (e.ctrlKey && e.shiftKey && e.key === "S") {
-        sendSelectedText();
+        let floatingButton = document.getElementById('floatingReadAloudButton');
+        if (!floatingButton) {
+            floatingButton = document.createElement('button');
+            floatingButton.id = 'floatingReadAloudButton';
+            floatingButton.textContent = 'Read Aloud';
+            floatingButton.style.position = 'fixed';
+            floatingButton.style.bottom = '50px';
+            floatingButton.style.right = '10px';
+            floatingButton.style.zIndex = '10000';
+            floatingButton.addEventListener('click', function() {
+                chrome.storage.local.get(['selectedVoice', 'serverIp'], function(result) {
+                    const voiceId = result.selectedVoice || 'defaultVoiceId';
+                    const serverIp = result.serverIp || 'localhost';
+                    const text = selectedText;
+                    const apiUrl = `http://${serverIp}:8020/tts_stream?text=${encodeURIComponent(text)}&speaker_wav=${encodeURIComponent(voiceId)}&language=en`;
+                    showFloatingPlayer(apiUrl);
+                });
+            });
+            document.body.appendChild(floatingButton);
+        }
     }
 });
+
+function showFloatingPlayer(apiUrl) {
+    const existingPlayer = document.getElementById('floatingAudioPlayer');
+    if (existingPlayer) {
+        existingPlayer.src = apiUrl;
+        existingPlayer.play();
+        return;
+    }
+    
+    const audioPlayer = document.createElement('audio');
+    audioPlayer.id = 'floatingAudioPlayer';
+    audioPlayer.controls = true;
+    audioPlayer.src = apiUrl;
+    audioPlayer.style.position = 'fixed';
+    audioPlayer.style.bottom = '10px';
+    audioPlayer.style.right = '10px';
+    audioPlayer.style.zIndex = '10000';
+    document.body.appendChild(audioPlayer);
+    audioPlayer.play();
+}

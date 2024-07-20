@@ -1,10 +1,4 @@
-// This function preprocesses text to remove content within parentheses before sending to TTS
-function preprocessText(text) {
-    return text.replace(/\(.*?\)/g, '');
-}
-
-// This function sends text to your XTTS API and retrieves the audio blob
-chrome.runtime.onInstalled.addListener(function() {
+chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
         id: "readAloud",
         title: "Read Aloud",
@@ -12,45 +6,38 @@ chrome.runtime.onInstalled.addListener(function() {
     });
 });
 
-chrome.contextMenus.onClicked.addListener(function(info, tab) {
+chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === "readAloud" && info.selectionText) {
-        chrome.storage.local.get(['selectedVoice', 'serverIp'], function(result) {
+        chrome.storage.local.get(['selectedVoice', 'serverIp'], (result) => {
             const voiceId = result.selectedVoice || 'defaultVoiceId';
             const serverIp = result.serverIp || 'localhost';
-            fetchAudio(info.selectionText, voiceId, serverIp);
+            const text = info.selectionText;
+            const apiUrl = `http://${serverIp}:8020/tts_stream?text=${encodeURIComponent(text)}&speaker_wav=${encodeURIComponent(voiceId)}&language=en`;
+            chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                func: showFloatingPlayer,
+                args: [apiUrl]
+            });
         });
     }
 });
 
-function fetchAudio(text, voiceId, serverIp) {
-    const apiUrl = `http://${serverIp}:8020/tts_to_audio/`;
-    fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            text: text,
-            speaker_wav: voiceId,
-            language: "en"
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Failed to fetch audio: ' + response.statusText);
-        }
-        return response.blob();
-    })
-    .then(blob => {
-        playAudio(blob);
-    })
-    .catch(error => {
-        console.error('Error fetching audio:', error);
-        alert('Failed to fetch audio: ' + error.message);
-    });
-}
-
-function playAudio(blob) {
-    const audio = new Audio(URL.createObjectURL(blob));
-    audio.play();
+function showFloatingPlayer(apiUrl) {
+    const existingPlayer = document.getElementById('floatingAudioPlayer');
+    if (existingPlayer) {
+        existingPlayer.src = apiUrl;
+        existingPlayer.play();
+        return;
+    }
+    
+    const audioPlayer = document.createElement('audio');
+    audioPlayer.id = 'floatingAudioPlayer';
+    audioPlayer.controls = true;
+    audioPlayer.src = apiUrl;
+    audioPlayer.style.position = 'fixed';
+    audioPlayer.style.bottom = '10px';
+    audioPlayer.style.right = '10px';
+    audioPlayer.style.zIndex = '10000';
+    document.body.appendChild(audioPlayer);
+    audioPlayer.play();
 }

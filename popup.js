@@ -1,19 +1,6 @@
-// Function to update the dropdown list with voices
-function updateVoiceList(voices) {
-    const voiceList = document.getElementById('voiceList');
-    voiceList.innerHTML = ''; // Clear existing options
-    voices.forEach(voice => {
-        const option = document.createElement('option');
-        option.value = voice.voice_id;
-        option.textContent = voice.name;
-        voiceList.appendChild(option);
-    });
-}
-
-// Event listener for the Refresh List button
 document.getElementById('saveServerIp').addEventListener('click', function() {
     const serverIp = document.getElementById('serverIp').value;
-    chrome.storage.local.set({serverIp: serverIp}, function() {
+    chrome.storage.local.set({ serverIp: serverIp }, function() {
         console.log("Server IP saved:", serverIp);
     });
 });
@@ -33,9 +20,9 @@ document.getElementById('refreshList').addEventListener('click', function() {
             const voiceList = document.getElementById('voiceList');
             voiceList.innerHTML = ''; // Clear existing options
             voices.forEach(voice => {
-                let option = document.createElement('option');
+                const option = document.createElement('option');
                 option.value = voice.voice_id;
-                option.text = voice.name;
+                option.textContent = voice.name;
                 voiceList.appendChild(option);
             });
         })
@@ -48,7 +35,7 @@ document.getElementById('refreshList').addEventListener('click', function() {
 
 document.getElementById('loadVoice').addEventListener('click', function() {
     const selectedVoice = document.getElementById('voiceList').value;
-    chrome.storage.local.set({selectedVoice: selectedVoice}, function() {
+    chrome.storage.local.set({ selectedVoice: selectedVoice }, function() {
         console.log("Voice selection saved:", selectedVoice);
     });
 });
