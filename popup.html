@@ -2,23 +2,20 @@
 <html>
 <head>
     <title>Text-to-Speech Settings</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 10px;
-        }
-    </style>
+    <script src="popup.js" defer></script>
 </head>
 <body>
     <h1>Text-to-Speech Settings</h1>
     <label for="serverIp">Server IP:</label>
-    <input type="text" id="serverIp" placeholder="localhost">
+    <input type="text" id="serverIp" placeholder="Enter server IP">
     <button id="saveServerIp">Save Server IP</button>
     <br><br>
     <label for="voiceList">Select Voice:</label>
     <select id="voiceList"></select>
     <button id="refreshList">Refresh List</button>
+    <br><br>
     <button id="loadVoice">Load Voice</button>
-    <script src="popup.js"></script>
+    <br><br>
+    <button id="saveDefaultVoice">Save as Default Voice</button>
 </body>
 </html>

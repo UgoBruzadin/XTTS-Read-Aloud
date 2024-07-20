@@ -4,40 +4,69 @@ chrome.runtime.onInstalled.addListener(() => {
         title: "Read Aloud",
         contexts: ["selection"]
     });
+    loadVoiceList();
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === "readAloud" && info.selectionText) {
-        chrome.storage.local.get(['selectedVoice', 'serverIp'], (result) => {
-            const voiceId = result.selectedVoice || 'defaultVoiceId';
+        chrome.storage.local.get(['defaultVoice', 'serverIp'], (result) => {
+            if (!result.defaultVoice) {
+                alert('Please set a default voice in the extension popup.');
+                return;
+            }
+            const voiceId = result.defaultVoice;
             const serverIp = result.serverIp || 'localhost';
-            const text = info.selectionText;
-            const apiUrl = `http://${serverIp}:8020/tts_stream?text=${encodeURIComponent(text)}&speaker_wav=${encodeURIComponent(voiceId)}&language=en`;
+            const text = preprocessText(info.selectionText);
             chrome.scripting.executeScript({
                 target: { tabId: tab.id },
-                func: showFloatingPlayer,
-                args: [apiUrl]
+                func: initializePlayer,
+                args: [text, voiceId, serverIp]
             });
         });
     }
 });
 
-function showFloatingPlayer(apiUrl) {
-    const existingPlayer = document.getElementById('floatingAudioPlayer');
-    if (existingPlayer) {
-        existingPlayer.src = apiUrl;
-        existingPlayer.play();
-        return;
+function preprocessText(text) {
+    let processedText = text.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '');
+    processedText = processedText.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾]/g, ''); // Superscripts
+    processedText = processedText.replace(/[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎]/g, ''); // Subscripts
+    return processedText.trim();
+}
+
+function initializePlayer(text, voiceId, serverIp) {
+    const apiUrl = `http://${serverIp}:8020/tts_stream?text=${encodeURIComponent(text)}&speaker_wav=${encodeURIComponent(voiceId)}&language=en`;
+    let existingPlayer = document.getElementById('floatingAudioPlayer');
+    if (!existingPlayer) {
+        existingPlayer = document.createElement('audio');
+        existingPlayer.id = 'floatingAudioPlayer';
+        existingPlayer.controls = true;
+        existingPlayer.style.position = 'fixed';
+        existingPlayer.style.bottom = '10px';
+        existingPlayer.style.right = '10px';
+        existingPlayer.style.zIndex = '10000';
+        document.body.appendChild(existingPlayer);
     }
-    
-    const audioPlayer = document.createElement('audio');
-    audioPlayer.id = 'floatingAudioPlayer';
-    audioPlayer.controls = true;
-    audioPlayer.src = apiUrl;
-    audioPlayer.style.position = 'fixed';
-    audioPlayer.style.bottom = '10px';
-    audioPlayer.style.right = '10px';
-    audioPlayer.style.zIndex = '10000';
-    document.body.appendChild(audioPlayer);
-    audioPlayer.play();
+    existingPlayer.src = apiUrl;
+    existingPlayer.play();
+}
+
+function loadVoiceList() {
+    chrome.storage.local.get(['serverIp'], (result) => {
+        const serverIp = result.serverIp || 'localhost';
+        fetch(`http://${serverIp}:8020/speakers`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        })
+        .then(response => response.json())
+        .then(voices => {
+            chrome.storage.local.set({ voices: voices });
+        })
+        .catch(error => {
+            console.error('Error fetching voices:', error);
+            alert('Failed to load voices: ' + error.message);
+        });
+    });
 }
