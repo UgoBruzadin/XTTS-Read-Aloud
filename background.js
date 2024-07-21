@@ -32,23 +32,52 @@ function preprocessText(text) {
     processedText = processedText.replace(/[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎]/g, ''); // Subscripts
     return processedText.trim();
 }
-
 function initializePlayer(text, voiceId, serverIp) {
     const apiUrl = `http://${serverIp}:8020/tts_stream?text=${encodeURIComponent(text)}&speaker_wav=${encodeURIComponent(voiceId)}&language=en`;
     let existingPlayer = document.getElementById('floatingAudioPlayer');
     if (!existingPlayer) {
-        existingPlayer = document.createElement('audio');
-        existingPlayer.id = 'floatingAudioPlayer';
-        existingPlayer.controls = true;
+        existingPlayer = document.createElement('div');
+        existingPlayer.id = 'floatingAudioPlayerContainer';
         existingPlayer.style.position = 'fixed';
         existingPlayer.style.bottom = '10px';
         existingPlayer.style.right = '10px';
         existingPlayer.style.zIndex = '10000';
+        existingPlayer.style.backgroundColor = 'white';
+        existingPlayer.style.border = '1px solid black';
+        existingPlayer.style.padding = '10px';
+        existingPlayer.style.borderRadius = '5px';
+
+        const audioElement = document.createElement('audio');
+        audioElement.id = 'floatingAudioPlayer';
+        audioElement.controls = true;
+        existingPlayer.appendChild(audioElement);
+
+        const speedLabel = document.createElement('label');
+        speedLabel.textContent = 'Speed:';
+        speedLabel.style.marginRight = '5px';
+        existingPlayer.appendChild(speedLabel);
+
+        const speedSlider = document.createElement('input');
+        speedSlider.type = 'range';
+        speedSlider.id = 'speedSlider';
+        speedSlider.min = '0.5';
+        speedSlider.max = '2.0';
+        speedSlider.step = '0.1';
+        speedSlider.value = '1.0';
+        existingPlayer.appendChild(speedSlider);
+
         document.body.appendChild(existingPlayer);
+
+        speedSlider.addEventListener('input', function() {
+            audioElement.playbackRate = parseFloat(speedSlider.value);
+        });
     }
-    existingPlayer.src = apiUrl;
-    existingPlayer.play();
+
+    const audioElement = document.getElementById('floatingAudioPlayer');
+    audioElement.src = apiUrl;
+    audioElement.play();
 }
+
 
 function loadVoiceList() {
     chrome.storage.local.get(['serverIp'], (result) => {
