@@ -16,27 +16,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (result.voices) {
             updateVoiceList(result.voices);
         } else {
-            chrome.storage.local.get(['serverIp'], function(result) {
-                const serverIp = result.serverIp || 'localhost';
-                fetch(`http://${serverIp}:8020/speakers`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                })
-                .then(response => response.json())
-                .then(voices => {
-                    chrome.storage.local.set({ voices: voices });
-                    updateVoiceList(voices);
-                })
-                .catch(error => {
-                    console.error('Error fetching voices:', error);
-                    alert('Failed to load voices: ' + error.message);
-                });
-            });
+            refreshVoiceList();
         }
     });
+
+    // Function to refresh the voice list from the server
+    function refreshVoiceList() {
+        chrome.storage.local.get(['serverIp'], function(result) {
+            const serverIp = result.serverIp || 'localhost';
+            fetch(`http://${serverIp}:8020/speakers`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache'
+                }
+            })
+            .then(response => response.json())
+            .then(voices => {
+                chrome.storage.local.set({ voices: voices });
+                updateVoiceList(voices);
+            })
+            .catch(error => {
+                console.error('Error fetching voices:', error);
+                alert('Failed to load voices: ' + error.message);
+            });
+        });
+    }
 
     // Event listener for the Save Server IP button
     document.getElementById('saveServerIp').addEventListener('click', function() {
@@ -45,6 +50,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("Server IP saved:", serverIp);
         });
     });
+
+    // Event listener for the Refresh List button
+    document.getElementById('refreshList').addEventListener('click', refreshVoiceList);
 
     // Event listener for the Load Voice button
     document.getElementById('loadVoice').addEventListener('click', function() {
