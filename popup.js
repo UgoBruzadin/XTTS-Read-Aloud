@@ -71,3 +71,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// Add event listener for a button to play the selected text
+document.getElementById('playSelectedTextButton').addEventListener('click', function() {
+    chrome.runtime.sendMessage({ action: "playSelectedText" });
+});
