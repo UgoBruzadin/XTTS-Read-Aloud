@@ -26,6 +26,52 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     }
 });
 
+// Function to fetch and play audio for the stored text
+function playSelectedText() {
+    chrome.storage.local.get(['selectedText', 'selectedVoice', 'serverIp'], function(result) {
+        const text = result.selectedText;
+        const voiceId = result.selectedVoice || 'defaultVoiceId';
+        const serverIp = result.serverIp || 'localhost';
+        if (text) {
+            initializePlayer(text, voiceId, serverIp);
+        } else {
+            console.error('No text selected.');
+        }
+    });
+}
+
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+    if (message.action === "playSelectedText") {
+        playSelectedText();
+    }
+});
+
+
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+    if (message.action === "initializePlayer") {
+        initializePlayer();
+    }
+});
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === "readAloud" && request.selectionText) {
+        chrome.storage.local.get(['defaultVoice', 'serverIp'], (result) => {
+            if (!result.defaultVoice) {
+                alert('Please set a default voice in the extension popup.');
+                return;
+            }
+            const voiceId = result.defaultVoice;
+            const serverIp = result.serverIp || 'localhost';
+            const text = preprocessText(request.selectionText);
+            chrome.scripting.executeScript({
+                target: { tabId: sender.tab.id },
+                func: initializePlayer,
+                args: [text, voiceId, serverIp]
+            });
+        });
+    }
+});
+
 function preprocessText(text) {
     let processedText = text.replace(/\(.*?\)/g, '').replace(/\[.*?\]/g, '');
     processedText = processedText.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾]/g, ''); // Superscripts
@@ -43,17 +89,18 @@ function initializePlayer(text, voiceId, serverIp) {
         existingPlayer.style.right = '10px';
         existingPlayer.style.zIndex = '10000';
         existingPlayer.style.backgroundColor = 'white';
-        existingPlayer.style.border = '1px solid black';
+        //existingPlayer.style.border = '1px solid black';
         existingPlayer.style.padding = '10px';
         existingPlayer.style.borderRadius = '5px';
 
         const audioElement = document.createElement('audio');
         audioElement.id = 'floatingAudioPlayer';
         audioElement.controls = true;
+        audioElement.playbackRate = 1.2;
         existingPlayer.appendChild(audioElement);
 
         const speedLabel = document.createElement('label');
-        speedLabel.textContent = 'Speed:';
+        speedLabel.textContent = 'Speed';
         speedLabel.style.marginRight = '5px';
         existingPlayer.appendChild(speedLabel);
 
@@ -63,7 +110,7 @@ function initializePlayer(text, voiceId, serverIp) {
         speedSlider.min = '0.5';
         speedSlider.max = '2.0';
         speedSlider.step = '0.1';
-        speedSlider.value = '1.0';
+        speedSlider.value = '1.2';
         existingPlayer.appendChild(speedSlider);
 
         document.body.appendChild(existingPlayer);
@@ -77,7 +124,6 @@ function initializePlayer(text, voiceId, serverIp) {
     audioElement.src = apiUrl;
     audioElement.play();
 }
-
 
 function loadVoiceList() {
     chrome.storage.local.get(['serverIp'], (result) => {
